@@ -48,3 +48,4 @@ htmlcov/
 
 # Jupyter Notebook
 .ipynb_checkpoints
+dashboard-ts\.env

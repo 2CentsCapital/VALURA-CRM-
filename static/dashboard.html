@@ -304,6 +304,45 @@
             background: #059669;
             transform: scale(1.05);
         }
+
+        .pipeline-selector {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .pipeline-selector label {
+            font-weight: 600;
+            color: #10b981;
+            font-size: 1.1em;
+        }
+
+        .pipeline-selector select {
+            flex: 1;
+            padding: 12px 15px;
+            border: 2px solid #10b981;
+            border-radius: 8px;
+            font-size: 1em;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .pipeline-selector select:hover {
+            border-color: #059669;
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+        }
+
+        .pipeline-selector select:focus {
+            outline: none;
+            border-color: #059669;
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+        }
     </style>
 </head>
 <body>
@@ -311,6 +350,14 @@
         <div class="header">
             <h1>🎯 Valura CRM Dashboard</h1>
             <p class="subtitle">Comprehensive analytics and data visualization</p>
+        </div>
+
+        <!-- Pipeline Selector -->
+        <div class="pipeline-selector">
+            <label for="pipelineSelect">🔀 Select Pipeline:</label>
+            <select id="pipelineSelect">
+                <option value="">All Pipelines</option>
+            </select>
         </div>
 
         <div class="dashboard-buttons">
@@ -362,8 +409,57 @@
         let currentPage = 1;
         let currentView = null;
         let currentFilters = {};
+        let selectedPipeline = null;
+
+        // Fetch and populate pipelines on page load
+        async function loadPipelines() {
+            try {
+                const response = await fetch(`${API_BASE}/api/pipelines`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const select = document.getElementById('pipelineSelect');
+                    
+                    // Add pipeline options
+                    data.data.forEach(pipeline => {
+                        const option = document.createElement('option');
+                        option.value = pipeline.id;
+                        option.textContent = pipeline.name;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading pipelines:', error);
+            }
+        }
+
+        // Pipeline change handler
+        document.getElementById('pipelineSelect').addEventListener('change', (e) => {
+            selectedPipeline = e.target.value || null;
+            
+            // Reload current view with new pipeline filter
+            if (currentView) {
+                loadView(currentView);
+            }
+        });
+
+        // Helper function to build URL with pipeline parameter
+        function buildURL(baseUrl, additionalParams = {}) {
+            const url = new URL(baseUrl, window.location.origin);
+            if (selectedPipeline) {
+                url.searchParams.append('pipeline_id', selectedPipeline);
+            }
+            for (const [key, value] of Object.entries(additionalParams)) {
+                if (value !== null && value !== undefined) {
+                    url.searchParams.append(key, value);
+                }
+            }
+            return url.toString();
+        }
 
         // Initialize
+        loadPipelines();
+        
         document.querySelectorAll('.dashboard-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const view = e.currentTarget.dataset.view;
@@ -415,7 +511,7 @@
         }
 
         async function loadContacts() {
-            const response = await fetch(`${API_BASE}/api/contacts?page=${currentPage}&per_page=25`);
+            const response = await fetch(buildURL(`${API_BASE}/api/contacts`, { page: currentPage, per_page: 25 }));
             const data = await response.json();
 
             if (!data.success) throw new Error('Failed to load contacts');
@@ -498,7 +594,7 @@
         }
 
         async function loadOpportunities() {
-            const response = await fetch(`${API_BASE}/api/opportunities?page=${currentPage}&per_page=25`);
+            const response = await fetch(buildURL(`${API_BASE}/api/opportunities`, { page: currentPage, per_page: 25 }));
             const data = await response.json();
 
             if (!data.success) throw new Error('Failed to load opportunities');
@@ -584,7 +680,7 @@
         }
 
         async function loadContactsNotInOpportunities() {
-            const response = await fetch(`${API_BASE}/api/contacts-not-in-opportunities`);
+            const response = await fetch(buildURL(`${API_BASE}/api/contacts-not-in-opportunities`));
             const data = await response.json();
 
             if (!data.success) throw new Error('Failed to load data');
@@ -642,7 +738,7 @@
         }
 
         async function loadContactsBySource(filterSource = null) {
-            const response = await fetch(`${API_BASE}/api/contacts-by-source`);
+            const response = await fetch(buildURL(`${API_BASE}/api/contacts/by-source`, filterSource ? { source: filterSource } : {}));
             const data = await response.json();
 
             if (!data.success) throw new Error('Failed to load data');
@@ -734,7 +830,7 @@
         }
 
         async function loadOpportunitiesByStage() {
-            const response = await fetch(`${API_BASE}/api/opportunities-by-stage`);
+            const response = await fetch(buildURL(`${API_BASE}/api/opportunities/by-stage`));
             const data = await response.json();
 
             if (!data.success) throw new Error('Failed to load data');
@@ -796,7 +892,7 @@
         }
 
         async function loadLeadsBySalesOwner() {
-            const response = await fetch(`${API_BASE}/api/leads-by-sales-owner`);
+            const response = await fetch(buildURL(`${API_BASE}/api/leads-by-sales-owner`));
             const data = await response.json();
 
             if (!data.success) throw new Error('Failed to load data');
@@ -846,7 +942,7 @@
         }
 
         async function loadSummary() {
-            const response = await fetch(`${API_BASE}/api/summary`);
+            const response = await fetch(buildURL(`${API_BASE}/api/summary`));
             const data = await response.json();
 
             if (!data.success) throw new Error('Failed to load summary data');
